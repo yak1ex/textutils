@@ -1,0 +1,22 @@
+{
+  "name": "textutils",
+  "version": "1.0.0",
+  "description": "Tiny line-oriented text utilities having shell script flavor",
+  "main": "textutils.js",
+  "dependencies": {
+    "denque": "^1.1.1",
+    "split2": "^2.1.1",
+    "through2": "^2.0.3"
+  },
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "chai-files": "^1.4.0",
+    "mocha": "^3.2.0"
+  },
+  "scripts": {
+    "test": "mocha"
+  },
+  "repository": "yak1ex/textutils",
+  "author": "yak_ex@mx.scn.tv",
+  "license": "BSD-2-Clause"
+}
