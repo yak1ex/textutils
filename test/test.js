@@ -47,11 +47,12 @@ describe('textutils', function() {
         expect(file(OUTPUT)).to.equal(file(INPUT));
       });
     });
-    it('should make a pipe to the specified non Readable stream', function() {
+    it('should make a pipe to the specified non Readable stream', function(done) {
       let os = fs.createWriteStream(OUTPUT);
-      return tu.cat(INPUT).pipe(os).on('close', function() {
+      tu.cat(INPUT).pipe(os).on('close', function() {
         expect(file(OUTPUT)).to.exist;
         expect(file(OUTPUT)).to.equal(file(INPUT));
+        done();
       });
     });
   });
