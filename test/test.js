@@ -12,6 +12,9 @@ const textutils = require('../textutils'), tu = textutils;
 const INPUT = path.join(__dirname, 'test.md');
 const OUTPUT = path.join(__dirname, 'test.out');
 const GREP = path.join(__dirname, 'test_grep.md');
+const PRE = path.join(__dirname, 'test_pre.md');
+const POST = path.join(__dirname, 'test_post.md');
+const PREPOST = path.join(__dirname, 'test_prepost.md');
 
 describe('textutils', function() {
   afterEach(function() {
@@ -35,6 +38,24 @@ describe('textutils', function() {
       return tu.cat(INPUT).out(OUTPUT).then(function() {
         expect(file(OUTPUT)).to.exist;
         expect(file(OUTPUT)).to.equal(file(INPUT));
+      });
+    });
+    it('should make a file whose contents are the same as recieved, with specified prefix', function() {
+      return tu.cat(INPUT).out(OUTPUT, {pre:"pre\npre\npre\n"}).then(function() {
+        expect(file(OUTPUT)).to.exist;
+        expect(file(OUTPUT)).to.equal(file(PRE));
+      });
+    });
+    it('should make a file whose contents are the same as recieved, with specified suffix', function() {
+      return tu.cat(INPUT).out(OUTPUT, {post:"post\npost\npost\n"}).then(function() {
+        expect(file(OUTPUT)).to.exist;
+        expect(file(OUTPUT)).to.equal(file(POST));
+      });
+    });
+    it('should make a file whose contents are the same as recieved, with specified prefix and suffix', function() {
+      return tu.cat(INPUT).out(OUTPUT, {pre:"pre\npre\npre\n", post:"post\npost\npost\n"}).then(function() {
+        expect(file(OUTPUT)).to.exist;
+        expect(file(OUTPUT)).to.equal(file(PREPOST));
       });
     });
   });
@@ -84,6 +105,64 @@ describe('textutils', function() {
 // sed
 // head
 // tail
+
+  describe('prepost', function() {
+    it('should make a file whose contents are the same as recieved without specifying pre/post', function() {
+      return tu.cat(INPUT).prepost().out(OUTPUT).then(function() {
+        expect(file(OUTPUT)).to.exist;
+        expect(file(OUTPUT)).to.equal(file(INPUT));
+      });
+    });
+    it('should make a file whose contents are the same as recieved, with specified prefix', function() {
+      return tu.cat(INPUT).prepost("pre\npre\npre\n").out(OUTPUT).then(function() {
+        expect(file(OUTPUT)).to.exist;
+        expect(file(OUTPUT)).to.equal(file(PRE));
+      });
+    });
+    it('should make a file whose contents are the same as recieved, with specified suffix', function() {
+      return tu.cat(INPUT).prepost(undefined, "post\npost\npost\n").out(OUTPUT).then(function() {
+        expect(file(OUTPUT)).to.exist;
+        expect(file(OUTPUT)).to.equal(file(POST));
+      });
+    });
+    it('should make a file whose contents are the same as recieved, with specified prefix and suffix', function() {
+      return tu.cat(INPUT).prepost("pre\npre\npre\n", "post\npost\npost\n").out(OUTPUT).then(function() {
+        expect(file(OUTPUT)).to.exist;
+        expect(file(OUTPUT)).to.equal(file(PREPOST));
+      });
+    });
+  });
+
+  describe('pre', function() {
+    it('should make a file whose contents are the same as recieved without specifying pre/post', function() {
+      return tu.cat(INPUT).pre().out(OUTPUT).then(function() {
+        expect(file(OUTPUT)).to.exist;
+        expect(file(OUTPUT)).to.equal(file(INPUT));
+      });
+    });
+    it('should make a file whose contents are the same as recieved, with specified prefix', function() {
+      return tu.cat(INPUT).pre("pre\npre\npre\n").out(OUTPUT).then(function() {
+        expect(file(OUTPUT)).to.exist;
+        expect(file(OUTPUT)).to.equal(file(PRE));
+      });
+    });
+  });
+
+  describe('post', function() {
+    it('should make a file whose contents are the same as recieved without specifying pre/post', function() {
+      return tu.cat(INPUT).post().out(OUTPUT).then(function() {
+        expect(file(OUTPUT)).to.exist;
+        expect(file(OUTPUT)).to.equal(file(INPUT));
+      });
+    });
+    it('should make a file whose contents are the same as recieved, with specified suffix', function() {
+      return tu.cat(INPUT).post("post\npost\npost\n").out(OUTPUT).then(function() {
+        expect(file(OUTPUT)).to.exist;
+        expect(file(OUTPUT)).to.equal(file(POST));
+      });
+    });
+  });
+
 // sort
 // uniq
 

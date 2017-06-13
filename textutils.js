@@ -47,6 +47,9 @@ const textutils = class {
   _pipe(transform, flush) {
     return new this.constructor(this.stream.pipe(through2(transform, flush)));
   }
+  _pipe_toline(transform, flush) {
+    return this.constructor._toline(this.stream.pipe(through2(transform, flush)));
+  }
   grep(re) {
     return this._pipe((chunk, enc, cb) => chunk.toString().match(re) ? cb(null, chunk) : cb());
   }
@@ -62,6 +65,15 @@ const textutils = class {
       (chunk, enc, cb) => { if(buf.length === num) buf.shift(); buf.push(chunk); cb(); },
       function(cb) { for(let val of buf) { this.push(val); } cb(); });
   }
+  prepost(pre, post) {
+    let predone = false;
+    return this._pipe_toline(
+      function(chunk, enc, cb) { if(!predone) { predone=true; if(pre!==undefined) { this.push(pre); } } cb(null, chunk); },
+      function(cb) { if(post!==undefined) { this.push(post)} cb(); }
+    );
+  }
+  pre(pre) { return this.prepost(pre); }
+  post(post) { return this.prepost(undefined, post); }
   // TODO: skip line
   map(f) {
     return this._pipe((chunk, enc, cb) => { let ret = f(chunk.toString()); if(ret === undefined) cb(); else cb(null, Buffer.from(ret)) });
@@ -159,9 +171,14 @@ const textutils = class {
    * @param  {string} path target file path
    * @return {Promise}     a promise object to be resolved when completion
    */
-  out(path) {
-    return new Promise((resolve, reject) =>
-      this.stream.pipe(fs.createWriteStream(path)).on('close', () => setImmediate(resolve)));
+  out(path, opt) {
+    return new Promise((resolve, reject) => {
+      let ws = fs.createWriteStream(path);
+      let { pre, post } = Object.assign({pre:undefined,post:undefined}, opt);
+      if(pre !== undefined) ws.write(pre)
+      this.stream.on('end', () => { if(post !== undefined) ws.end(post); else ws.end(); });
+      this.stream.pipe(ws, { end: false }).on('close', resolve);
+    });
   }
 };
 
