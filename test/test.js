@@ -12,6 +12,7 @@ const textutils = require('../textutils'), tu = textutils;
 const INPUT = path.join(__dirname, 'test.md');
 const OUTPUT = path.join(__dirname, 'test.out');
 const GREP = path.join(__dirname, 'test_grep.md');
+const SED = path.join(__dirname, 'test_sed.md');
 const PRE = path.join(__dirname, 'test_pre.md');
 const POST = path.join(__dirname, 'test_post.md');
 const PREPOST = path.join(__dirname, 'test_prepost.md');
@@ -102,7 +103,21 @@ describe('textutils', function() {
     });
   });
 
-// sed
+  describe('sed', function() {
+    it('should filter content by the specified old string and new string', function() {
+      return tu.cat(INPUT).sed('1', 'i').out(OUTPUT).then(function() {
+        expect(file(OUTPUT)).to.exist;
+        expect(file(OUTPUT)).to.equal(file(SED));
+      });
+    });
+    it('should filter content by the specified regex and function', function() {
+      return tu.cat(INPUT).sed(/1/, () => 'i').out(OUTPUT).then(function() {
+        expect(file(OUTPUT)).to.exist;
+        expect(file(OUTPUT)).to.equal(file(SED));
+      });
+    });
+  });
+
 // head
 // tail
 
