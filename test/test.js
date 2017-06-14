@@ -2,8 +2,9 @@
 
 const stream = require('stream'), path = require('path'), fs = require('fs');
 
-const chai = require('chai'), chaiFiles = require('chai-files');
+const chai = require('chai'), chaiFiles = require('chai-files'), chaiAsPromised = require('chai-as-promised');
 chai.use(chaiFiles);
+chai.use(chaiAsPromised);
 const expect = chai.expect;
 const file = chaiFiles.file;
 
@@ -11,6 +12,7 @@ const textutils = require('../textutils'), tu = textutils;
 
 const INPUT = path.join(__dirname, 'test.md');
 const OUTPUT = path.join(__dirname, 'test.out');
+const ERROR = path.join(__dirname, 'notexistent/test.out');
 const GREP = path.join(__dirname, 'test_grep.md');
 const SED = path.join(__dirname, 'test_sed.md');
 const PRE = path.join(__dirname, 'test_pre.md');
@@ -58,6 +60,9 @@ describe('textutils', function() {
         expect(file(OUTPUT)).to.exist;
         expect(file(OUTPUT)).to.equal(file(PREPOST));
       });
+    });
+    it('should make a promise to be rejected with invalid path name', function() {
+      return expect(tu.cat(INPUT).out(ERROR)).to.be.rejectedWith(Error, 'ENOENT: no such file or directory');
     });
   });
 

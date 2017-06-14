@@ -173,11 +173,18 @@ const textutils = class {
    */
   out(path, opt) {
     return new Promise((resolve, reject) => {
-      let ws = fs.createWriteStream(path);
-      let { pre, post } = Object.assign({pre:undefined,post:undefined}, opt);
-      if(pre !== undefined) ws.write(pre)
-      this.stream.on('end', () => { if(post !== undefined) ws.end(post); else ws.end(); });
-      this.stream.pipe(ws, { end: false }).on('close', resolve);
+      try {
+        let ws = fs.createWriteStream(path).on('error', reject);
+        let { pre, post } = Object.assign({pre:undefined,post:undefined}, opt);
+        if(pre !== undefined) ws.write(pre)
+        this.stream
+          .on('error', reject)
+          .on('end', () => { if(post !== undefined) ws.end(post); else ws.end(); })
+          .pipe(ws, { end: false })
+          .on('close', resolve);
+      } catch(e) {
+        reject(e);
+      }
     });
   }
 };

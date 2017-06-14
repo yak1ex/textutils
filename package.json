@@ -10,6 +10,7 @@
   },
   "devDependencies": {
     "chai": "^3.5.0",
+    "chai-as-promised": "^7.0.0",
     "chai-files": "^1.4.0",
     "mocha": "^3.2.0"
   },
