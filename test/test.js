@@ -64,6 +64,9 @@ describe('textutils', function() {
     it('should make a promise to be rejected with invalid path name', function() {
       return expect(tu.cat(INPUT).out(ERROR)).to.be.rejectedWith(Error, 'ENOENT: no such file or directory');
     });
+    it('should make a promise to be rejected with cat() by invalid path name', function() {
+      return expect(tu.cat(ERROR).out(OUTPUT)).to.be.rejectedWith(Error, 'ENOENT: no such file or directory');
+    });
   });
 
   describe('pipe', function() {

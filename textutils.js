@@ -16,6 +16,18 @@ const LimitedStream = class extends stream.Readable {
   }
 };
 
+const _pipe = (rs, ws) => {
+  rs.on('error', (e) => ws.destroy(e));
+  return rs.pipe(ws);
+};
+
+const _ = (resolve, reject, f) => {
+  return ((f) => function(resolve, reject){ try { f(resolve, reject); } catch(e) { reject(e); } })(
+    reject !== undefined ? () => f(resolve, reject)
+                         : resolve
+  )
+};
+
 /** Tiny text utilities */
 const textutils = class {
   constructor(st) {
@@ -23,17 +35,15 @@ const textutils = class {
   }
   static _toline(rs) {
     let left;
-    return new this(rs
-      .pipe(split2(/(\r?\n)/))
-      .pipe(through2((chunk, enc, cb) => {
-        if(chunk.includes('\n')) {
-          cb(null, Buffer.concat([left===undefined?new Buffer(0):left, chunk]));
-          left = undefined;
-        } else {
-          cb();
-          left = chunk;
-        }
-      }, function(cb) { if(left !== undefined) this.push(left); cb(); })));
+    return new this(_pipe(_pipe(rs, split2(/(\r?\n)/)), through2((chunk, enc, cb) => {
+      if(chunk.includes('\n')) {
+        cb(null, Buffer.concat([left===undefined?new Buffer(0):left, chunk]));
+        left = undefined;
+      } else {
+        cb();
+        left = chunk;
+      }
+    }, function(cb) { if(left !== undefined) this.push(left); cb(); })));
   }
   // TODO: multiple paths
   /**
@@ -44,30 +54,33 @@ const textutils = class {
   static cat(path) {
     return this._toline(fs.createReadStream(path, { encoding: 'utf8' }));
   }
-  _pipe(transform, flush) {
-    return new this.constructor(this.stream.pipe(through2(transform, flush)));
+  _pipe(ws) {
+    return _pipe(this.stream, ws);
   }
-  _pipe_toline(transform, flush) {
-    return this.constructor._toline(this.stream.pipe(through2(transform, flush)));
+  _tpipe(transform, flush) {
+    return new this.constructor(this._pipe(through2(transform, flush)));
+  }
+  _tpipe_toline(transform, flush) {
+    return this.constructor._toline(this._pipe(through2(transform, flush)));
   }
   grep(re) {
-    return this._pipe((chunk, enc, cb) => chunk.toString().match(re) ? cb(null, chunk) : cb());
+    return this._tpipe((chunk, enc, cb) => chunk.toString().match(re) ? cb(null, chunk) : cb());
   }
   sed(re1, re2) {
-    return this._pipe((chunk, enc, cb) => cb(null, Buffer.from(chunk.toString().replace(re1, re2))));
+    return this._tpipe((chunk, enc, cb) => cb(null, Buffer.from(chunk.toString().replace(re1, re2))));
   }
   head(num) {
-    return this._pipe((chunk, enc, cb) => num-->0?cb(null,chunk):cb());
+    return this._tpipe((chunk, enc, cb) => num-->0?cb(null,chunk):cb());
   }
   tail(num) {
     let buf = new Deque();
-    return this._pipe(
+    return this._tpipe(
       (chunk, enc, cb) => { if(buf.length === num) buf.shift(); buf.push(chunk); cb(); },
       function(cb) { for(let val of buf) { this.push(val); } cb(); });
   }
   prepost(pre, post) {
     let predone = false;
-    return this._pipe_toline(
+    return this._tpipe_toline(
       function(chunk, enc, cb) { if(!predone) { predone=true; if(pre!==undefined) { this.push(pre); } } cb(null, chunk); },
       function(cb) { if(post!==undefined) { this.push(post)} cb(); }
     );
@@ -76,14 +89,14 @@ const textutils = class {
   post(post) { return this.prepost(undefined, post); }
   // TODO: skip line
   map(f) {
-    return this._pipe((chunk, enc, cb) => { let ret = f(chunk.toString()); if(ret === undefined) cb(); else cb(null, Buffer.from(ret)) });
+    return this._tpipe((chunk, enc, cb) => { let ret = f(chunk.toString()); if(ret === undefined) cb(); else cb(null, Buffer.from(ret)) });
   }
   // FIXME: naive implementation
   // TODO: key extractor
   // TODO: comparator
   sort() {
     let data = [];
-    return this._pipe((chunk, enc, cb) => { data.push(chunk); cb(); },
+    return this._tpipe((chunk, enc, cb) => { data.push(chunk); cb(); },
       function(cb) { data.sort(); for(let val of data) this.push(val); cb(); }
     );
   }
@@ -91,7 +104,7 @@ const textutils = class {
   // TODO: comparator
   uniq() {
     let data;
-    return this._pipe(function(chunk, enc, cb) {
+    return this._tpipe(function(chunk, enc, cb) {
         if(data === undefined) data = chunk
         else if (!data.equals(chunk)) { this.push(data); data = chunk; }
         cb();
@@ -104,14 +117,14 @@ const textutils = class {
     options.stdio = [ 'pipe', 'pipe', 'ignore' ]; // TODO: binding with stderr
     let ch = child_process.spawn(command, args, options);
     this.stream.pause();
-    this.stream.pipe(ch.stdin);
+    this._pipe(ch.stdin);
     this.stream.on('end', () => this.stream.unpipe());
     this.stream.resume();
     // FIXME: error handling
     return this.constructor._toline(ch.stdout);
   }
   pipe(ws) {
-    let out = this.stream.pipe(ws);
+    let out = this._pipe(ws);
     // stdout and stderr are Duplex streams
     if(ws !== process.stdout && ws !== process.stderr && ws instanceof stream.Readable)
       return this.constructor._toline(out);
@@ -125,7 +138,8 @@ const textutils = class {
     f(this); return this;
   }
   _divide(is_from, matcher_, f) {
-    return new Promise((resolve, reject) => {
+// TODO: error handling check
+    return new Promise(_((resolve, reject) => {
       let matcher = (typeof matcher_ === 'string' || matcher_ instanceof RegExp) ? s => s.match(matcher_) : matcher_;
       let lines = 0, count = 0, data = new Deque(), eos = false, stm, reader, first = true;
       let req = 0; // according to spec, should be 1 or 0
@@ -160,7 +174,7 @@ const textutils = class {
         eos = true;
         if(req>0) pusher(null); // reader() already called
       });
-    });
+    }));
   }
   divide_from(matcher, f) { return this._divide(true, matcher, f); }
   divide_to(matcher, f) { return this._divide(false, matcher, f); }
@@ -172,20 +186,15 @@ const textutils = class {
    * @return {Promise}     a promise object to be resolved when completion
    */
   out(path, opt) {
-    return new Promise((resolve, reject) => {
-      try {
-        let ws = fs.createWriteStream(path).on('error', reject);
-        let { pre, post } = Object.assign({pre:undefined,post:undefined}, opt);
-        if(pre !== undefined) ws.write(pre)
-        this.stream
-          .on('error', reject)
-          .on('end', () => { if(post !== undefined) ws.end(post); else ws.end(); })
-          .pipe(ws, { end: false })
-          .on('close', resolve);
-      } catch(e) {
-        reject(e);
-      }
-    });
+    return new Promise(_((resolve, reject) => {
+      let ws = fs.createWriteStream(path).on('error', reject).on('close', resolve);
+      let { pre, post } = Object.assign({pre:undefined,post:undefined}, opt);
+      if(pre !== undefined) ws.write(pre)
+      this.stream
+        .on('error', (e) => { ws.destroy(e); reject(e); })
+        .on('end', _(resolve, reject, () => { if(post !== undefined) ws.end(post); else ws.end(); }))
+        .pipe(ws, { end: false });
+    }));
   }
 };
 
