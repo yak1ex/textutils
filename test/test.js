@@ -94,7 +94,18 @@ describe('textutils', function() {
 
 // apply
 // map
-// spawn
+
+  describe('spawn', function() {
+    it('should invoke external command', function() {
+      return tu.cat(INPUT).spawn('node', ['-e', 'process.stdin.pipe(process.stdout)']).out(OUTPUT).then(function() {
+        expect(file(OUTPUT)).to.exist;
+        expect(file(OUTPUT)).to.equal(file(INPUT));
+      })
+    });
+    it('should deliver error of invoking external command', function() {
+      return expect(tu.cat(INPUT).spawn('_not_existent_').out(OUTPUT)).to.be.rejectedWith(Error, 'spawn _not_existent_ ENOENT');
+    });
+  });
 
   describe('grep', function() {
     it('should filter content by the specified regex object', function() {

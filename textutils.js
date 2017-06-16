@@ -153,15 +153,14 @@ const textutils = class {
     );
   }
   spawn(command, args, options) {
+    let ret;
     options = Object.assign({}, options);
     options.stdio = [ 'pipe', 'pipe', 'ignore' ]; // TODO: binding with stderr
     let ch = child_process.spawn(command, args, options);
-    this.stream.pause();
-    this._pipe(ch.stdin);
+    ch.on('error', (e) => ret.stream.destroy(e));
     this.stream.on('end', () => this.stream.unpipe());
-    this.stream.resume();
-    // FIXME: error handling
-    return this.constructor._toline(ch.stdout);
+    this._pipe(ch.stdin);
+    return ret = this.constructor._toline(ch.stdout);
   }
   pipe(ws) {
     let out = this._pipe(ws);
