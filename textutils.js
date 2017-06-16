@@ -129,7 +129,7 @@ const textutils = class {
   post(post) { return this.prepost(undefined, post); }
   // TODO: skip line
   map(f) {
-    return this._tpipe((chunk, enc, cb) => { let ret = f(chunk.toString()); if(ret === undefined) cb(); else cb(null, Buffer.from(ret)) });
+    return this._tpipe((chunk, enc, cb) => { let ret = f(chunk.toString()); if(ret === undefined || ret === null) cb(); else cb(null, Buffer.from(ret)) });
   }
   // FIXME: naive implementation
   // TODO: key extractor
