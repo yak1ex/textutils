@@ -8,7 +8,10 @@ const Deque = require('denque');
 
 // TODO: documentation
 // TODO: error handling
-/** Internal helper class */
+/**
+ * An internal helper class to implement divide()
+ * @access protected
+ */
 const LimitedStream = class extends stream.Readable {
   constructor(reader, opt) {
     super(opt);
@@ -21,7 +24,7 @@ const LimitedStream = class extends stream.Readable {
  * @access protected
  * @param  {Stream.Readable} rs A readable stream piped from
  * @param  {Stream.Writable} ws A writable stream piped to
- * @return {Stream.Writable}    ws
+ * @return {Stream.Writable} passed ws itself
  */
 const _pipe = (rs, ws) => {
   rs.on('error', (e) => ws.destroy(e));
@@ -33,30 +36,30 @@ const _pipe = (rs, ws) => {
  * @param {Error} Reason why the promise is rejected
  */
 
- /**
-  * @callback resolveCallback
-  * @param {Error} Reason why the promise is rejected
-  */
+/**
+ * @callback resolveCallback
+ * @param {Error} Reason why the promise is rejected
+ */
 
-  /**
-   * @typedef {function} Executor
-   * @param {resolveCallback} resolve
-   * @aram {rejectCallback} reject
-   */
+/**
+ * @typedef {function} Executor
+ * @param {resolveCallback} resolve
+ * @aram {rejectCallback} reject
+ */
 
 /**
  * A helper function to transfer exception to reject promise
  * @access protected
  * @param  {resolveCallback|function} resolve A resolve callback or an executor of a promise
- * @param  {rejectCallback} [reject]  A reject callback of a promise for 3-parameter call
- * @param  {Executor} [f]       An executor for 3-parameter call
- * @return {Executor}         Actual valid arguments of returned function depends on calling parameter.
- * @example
+ * @param  {rejectCallback} [reject] A reject callback of a promise for 3-parameter call
+ * @param  {Executor} [f] An executor for 3-parameter call
+ * @return {Executor} Actual valid arguments of returned function depends on calling parameter.
+ * @example <caption>Example for 3 parameter</caption>
  * // Throwing exeception in the callback causes calling reject(exception)
  * // Acutually, callback is called with cb(resolve, reject), however, resolve and reject are accessible for typical cases.
  * new Promise((resolve, reject) => {
  *   EventEmitter.on('event', _(resolve, reject, () => { ... })); }
- * @example
+ * @example <caption>Example for 1 parameter</caption>
  * // Throwing exeception in the callback causes calling reject(exception)
  * new Promise(_((resolve, reject) => { ... })));
  * }
@@ -68,11 +71,43 @@ const _ = (resolve, reject, f) => {
   )
 };
 
-/** Tiny text utilities */
+/**
+ * @callback transformCallbackCallback
+ * @param {?Error} error
+ * @param {Buffer|string|any} data
+ */
+
+/**
+ * @callback transformCallback
+ * @param {Buffer|string|any} chunk The chunk to be tranformed
+ * @param {string} enc An encoding type or 'buffer'
+ * @param {transformCallbackCallback} cb A callback to signal that the supplied chunk is consumed
+ */
+
+/**
+ * @callback flushCallback
+ * @param {transformCallbackCallback} cb A callback to signal that transform is completed
+ */
+
+/**
+ * @classdesc Tiny text utilities.
+ * Almost all methods acts on content line-by-line manner and returns textutils object to enable chaining.
+ * @memberof module:textutils
+ */
 const textutils = class {
+  /**
+   * @constructor
+   * @param  {Stream.Readable} st A readable stream to be holded by the resultant textutils object
+   */
   constructor(st) {
     this.stream = st;
   }
+  /**
+   * A helper method to create a textutils object having the specified stream wrapped by a line-by-line stream
+   * @static
+   * @param  {Stream.Readable} rs A readable stream to be wrapped
+   * @return {textutils}
+   */
   static _toline(rs) {
     let left;
     return new this(_pipe(_pipe(rs, split2(/(\r?\n)/)), through2((chunk, enc, cb) => {
@@ -85,7 +120,7 @@ const textutils = class {
       }
     }, function(cb) { if(left !== undefined) this.push(left); cb(); })));
   }
-  // TODO: multiple paths
+  // TODO: support multiple paths
   /**
    * output contents of the specified path
    * @param  {string} path target file path
@@ -94,30 +129,77 @@ const textutils = class {
   static cat(path) {
     return this._toline(fs.createReadStream(path, { encoding: 'utf8' }));
   }
+  /**
+   * A helper method to pipe streams, calling _pipe(this.stream, ws)
+   * @access protected
+   * @param  {Stream.Writable} ws A writable stream piped to
+   * @return {Stream.Writable} passed ws itself
+   */
   _pipe(ws) {
     return _pipe(this.stream, ws);
   }
+  /**
+   * A helper method to pipe to a transform stream
+   * @access protected
+   * @param  {transformCallback} transform A transform callback for transform stream
+   * @param  {flushCallback} flush A flush callback for transform stream
+   * @return {textutils} A textutils object holding the resultant transform stream
+   */
   _tpipe(transform, flush) {
     return new this.constructor(this._pipe(through2(transform, flush)));
   }
+  /**
+   * A helper method to pipe to a transform stream with a line-by-line stream
+   * @access protected
+   * @param  {transformCallback} transform A transform callback for transform stream
+   * @param  {flushCallback} flush A flush callback for transform stream
+   * @return {textutils} A textutils object holding the resultant transform stream
+   */
   _tpipe_toline(transform, flush) {
     return this.constructor._toline(this._pipe(through2(transform, flush)));
   }
+  /**
+   * Filter content by string.match()
+   * @param  {RegExp} re passed to string.match()
+   * @return {textutils}
+   */
   grep(re) {
     return this._tpipe((chunk, enc, cb) => chunk.toString().match(re) ? cb(null, chunk) : cb());
   }
+  /**
+   * Replace content by string.replace()
+   * @param  {RegExp|string} re1 passed as 1st parameter of string.replace()
+   * @param  {string|function} re2 passed as 2nd parameter of string.replace()
+   * @return {textutils}
+   */
   sed(re1, re2) {
     return this._tpipe((chunk, enc, cb) => cb(null, Buffer.from(chunk.toString().replace(re1, re2))));
   }
+  /**
+   * Output the first specified number of lines
+   * @param  {integer} num Number of lines
+   * @return {textutils}
+   */
   head(num) {
     return this._tpipe((chunk, enc, cb) => num-->0?cb(null,chunk):cb());
   }
+  /**
+   * Output the last specified number of lines
+   * @param  {integer} num Number of lines
+   * @return {textutils}
+   */
   tail(num) {
     let buf = new Deque();
     return this._tpipe(
       (chunk, enc, cb) => { if(buf.length === num) buf.shift(); buf.push(chunk); cb(); },
       function(cb) { for(let val of buf) { this.push(val); } cb(); });
   }
+  /**
+   * Output the specified header and footer around content
+   * @param  {Buffer|string} pre A header content
+   * @param  {Buffer|string} post A footer content
+   * @return {textutils}
+   */
   prepost(pre, post) {
     let predone = false;
     return this._tpipe_toline(
@@ -125,9 +207,28 @@ const textutils = class {
       function(cb) { if(post!==undefined) { this.push(post)} cb(); }
     );
   }
+  /**
+   * Output content with the specified header
+   * @param  {Buffer|string} pre A header content
+   * @return {textutils}
+   */
   pre(pre) { return this.prepost(pre); }
+  /**
+   * Output content with the specified footer
+   * @param  {Buffer|string} post A footer content
+   * @return {textutils}
+   */
   post(post) { return this.prepost(undefined, post); }
-  // TODO: skip line
+  // TODO: method to skip lines
+  /**
+   * @callback mapCallback
+   * @param {string} s An input line
+   * @return {?string} An output line
+   */
+  /**
+   * Output content mapped by the specified filter function
+   * @param {mapCallback} f A filter function called for each line. If it returns null or undefined, the line is ignored.
+   */
   map(f) {
     return this._tpipe((chunk, enc, cb) => { let ret = f(chunk.toString()); if(ret === undefined || ret === null) cb(); else cb(null, Buffer.from(ret)) });
   }
@@ -240,7 +341,10 @@ const textutils = class {
 /**
  * Tiny text utilities
  * @module textutils
+ * @example
+ * const tu = require('textutils');
+ * tu.input('input.txt').grep(/foo/).sed(/bar/i, 'zot').out('output.txt')
+ *   .then(()=>console.log('success'),(e)=>console.log(e));
  */
 
-/** textutils class */
 module.exports = textutils;
