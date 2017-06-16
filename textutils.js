@@ -16,11 +16,51 @@ const LimitedStream = class extends stream.Readable {
   }
 };
 
+/**
+ * Call rs.pipe(ws) with error propagation from rs to ws
+ * @access protected
+ * @param  {Stream.Readable} rs A readable stream piped from
+ * @param  {Stream.Writable} ws A writable stream piped to
+ * @return {Stream.Writable}    ws
+ */
 const _pipe = (rs, ws) => {
   rs.on('error', (e) => ws.destroy(e));
   return rs.pipe(ws);
 };
 
+/**
+ * @callback rejectCallback
+ * @param {Error} Reason why the promise is rejected
+ */
+
+ /**
+  * @callback resolveCallback
+  * @param {Error} Reason why the promise is rejected
+  */
+
+  /**
+   * @typedef {function} Executor
+   * @param {resolveCallback} resolve
+   * @aram {rejectCallback} reject
+   */
+
+/**
+ * A helper function to transfer exception to reject promise
+ * @access protected
+ * @param  {resolveCallback|function} resolve A resolve callback or an executor of a promise
+ * @param  {rejectCallback} [reject]  A reject callback of a promise for 3-parameter call
+ * @param  {Executor} [f]       An executor for 3-parameter call
+ * @return {Executor}         Actual valid arguments of returned function depends on calling parameter.
+ * @example
+ * // Throwing exeception in the callback causes calling reject(exception)
+ * // Acutually, callback is called with cb(resolve, reject), however, resolve and reject are accessible for typical cases.
+ * new Promise((resolve, reject) => {
+ *   EventEmitter.on('event', _(resolve, reject, () => { ... })); }
+ * @example
+ * // Throwing exeception in the callback causes calling reject(exception)
+ * new Promise(_((resolve, reject) => { ... })));
+ * }
+ */
 const _ = (resolve, reject, f) => {
   return ((f) => function(resolve, reject){ try { f(resolve, reject); } catch(e) { reject(e); } })(
     reject !== undefined ? () => f(resolve, reject)
