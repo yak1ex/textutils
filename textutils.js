@@ -91,7 +91,7 @@ const _ = (resolve, reject, f) => {
 
 /**
  * @classdesc Tiny text utilities.
- * Almost all methods acts on content line-by-line manner and returns textutils object to enable chaining.
+ * Almost all methods acts on text content in line-by-line manner and returns textutils object to enable chaining.
  * @memberof module:textutils
  */
 const textutils = class {
@@ -228,6 +228,7 @@ const textutils = class {
   /**
    * Output content mapped by the specified filter function
    * @param {mapCallback} f A filter function called for each line. If it returns null or undefined, the line is ignored.
+   * @return {textutils}
    */
   map(f) {
     return this._tpipe((chunk, enc, cb) => { let ret = f(chunk.toString()); if(ret === undefined || ret === null) cb(); else cb(null, Buffer.from(ret)) });
@@ -235,6 +236,10 @@ const textutils = class {
   // FIXME: naive implementation
   // TODO: key extractor
   // TODO: comparator
+  /**
+   * Sort, currently, by just calling array.sort()
+   * @return {textutils}
+   */
   sort() {
     let data = [];
     return this._tpipe((chunk, enc, cb) => { data.push(chunk); cb(); },
@@ -243,6 +248,10 @@ const textutils = class {
   }
   // TODO: key extractor
   // TODO: comparator
+  /**
+   * Remove duplicated consecutive lines
+   * @return {textutils}
+   */
   uniq() {
     let data;
     return this._tpipe(function(chunk, enc, cb) {
@@ -253,6 +262,15 @@ const textutils = class {
       function(cb) { if(data !== undefined) this.push(data); cb(); }
     );
   }
+  /**
+   * Execute an external command as a filter.
+   * Arguments are passed to child_process.spawn(). options.stdio will be overridden as [ 'pipe', 'pipe', 'ignore' ].
+   * If an error occurrs when executing the command, the error propagates through a call chain.
+   * @param  {string} command The command to run
+   * @param  {Array} args    List of string arguments
+   * @param  {Object} options See child_process.spawn() in node.js
+   * @return {textutils}
+   */
   spawn(command, args, options) {
     let ret;
     options = Object.assign({}, options);
@@ -263,6 +281,12 @@ const textutils = class {
     this._pipe(ch.stdin);
     return ret = this.constructor._toline(ch.stdout);
   }
+  /**
+   * Pipe to the specified stream.
+   * If an error occurs on reader side, ws.destroy() is called.
+   * @param  {Stream.Writable} ws A writable stream piped to
+   * @return {textutils}
+   */
   pipe(ws) {
     let out = this._pipe(ws);
     // stdout and stderr are Duplex streams
@@ -274,9 +298,33 @@ const textutils = class {
   apply(f) {
     return f(this.stream);
   }
+  /**
+   * @callback teeCallback
+   * @param {textutils} tu
+   */
+  /**
+   * Split call chain
+   * @param  {teeCallback} f The passed textutils object is identical to return value of this method
+   * @return {textutils}
+   * @example
+   * tu.cat('input.txt').tee(t=>t.out('output1.txt')).out('output2.txt');
+   */
   tee(f) {
     f(this); return this;
   }
+  /**
+   * @callback matcherCallback
+   * @param {string}
+   * @return {boolean}
+   */
+  /**
+   * An internal helper method to implement divide() variants.
+   * @access protected
+   * @param  {Boolean} is_from  If true, the line that the match succeeds will be the first line of the divided sections. If false, the line that the match succeeds will be the last line of the divided sections.
+   * @param  {string|RegExp|matcherCallback}  matcher_ A criteria for division
+   * @param  {teeCallback}  f        A callback for each divided section
+   * @return {Promise}     A promise object to be resolved when completion
+   */
   _divide(is_from, matcher_, f) {
 // TODO: error handling check
     return new Promise(_((resolve, reject) => {
@@ -316,12 +364,32 @@ const textutils = class {
       });
     }));
   }
+  /**
+   * Divide content according to the specified criteria.
+   * The line that the match succeeds will be the first line of the divided sections.
+   * @param  {string|RegExp|matcherCallback}  matcher_ A criteria for division
+   * @param  {teeCallback}  f        A callback for each divided section
+   * @return {Promise}     A promise object to be resolved when completion
+   */
   divide_from(matcher, f) { return this._divide(true, matcher, f); }
+  /**
+   * Divide content according to the specified criteria.
+   * The line that the match succeeds will be the last line of the divided sections.
+   * @param  {string|RegExp|matcherCallback}  matcher_ A criteria for division
+   * @param  {teeCallback}  f        A callback for each divided section
+   * @return {Promise}     A promise object to be resolved when completion
+   */
   divide_to(matcher, f) { return this._divide(false, matcher, f); }
+  /**
+   * Divide content by line numbers.
+   * @param  {integer} num A number of lines for a divided section
+   * @param  {teeCallback}  f        A callback for each divided section
+   * @return {Promise}     A promise object to be resolved when completion
+   */
   divide(num, f) { return this._divide(true, (v,n) => n%num==0, f); }
   // TODO: output to stdout/stderr
   /**
-   * write streamed input to the specified file
+   * Write streamed input to the specified file.
    * @param  {string} path target file path
    * @return {Promise}     a promise object to be resolved when completion
    */
