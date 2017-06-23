@@ -6,7 +6,6 @@ const split2 = require('split2');
 const through2 = require('through2');
 const Deque = require('denque');
 
-// TODO: documentation
 // TODO: error handling
 /**
  * An internal helper class to implement divide()
@@ -295,6 +294,16 @@ const textutils = class {
      else
       return out;
   }
+  /**
+   * @callback applyCallback
+   * @param {stream.Readable}
+   * @return {any}
+   */
+  /**
+   * Apply the specified function to the stream
+   * @param  {applyCallback} f Called as f(stream)
+   * @return {any}   Return value of the specified f
+   */
   apply(f) {
     return f(this.stream);
   }
