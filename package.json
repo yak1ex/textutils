@@ -12,10 +12,11 @@
     "chai": "^3.5.0",
     "chai-as-promised": "^7.0.0",
     "chai-files": "^1.4.0",
-    "mocha": "^3.2.0"
+    "mocha": "^3.2.0",
+    "standard": "*"
   },
   "scripts": {
-    "test": "mocha"
+    "test": "standard && mocha"
   },
   "repository": "yak1ex/textutils",
   "author": "yak_ex@mx.scn.tv",

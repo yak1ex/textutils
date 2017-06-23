@@ -1,10 +1,10 @@
-'use strict';
-const fs = require('fs');
-const stream = require('stream');
-const child_process = require('child_process');
-const split2 = require('split2');
-const through2 = require('through2');
-const Deque = require('denque');
+'use strict'
+const fs = require('fs')
+const stream = require('stream')
+const cprocess = require('child_process')
+const split2 = require('split2')
+const through2 = require('through2')
+const Deque = require('denque')
 
 // TODO: error handling
 /**
@@ -12,11 +12,11 @@ const Deque = require('denque');
  * @access protected
  */
 const LimitedStream = class extends stream.Readable {
-  constructor(reader, opt) {
-    super(opt);
-    this._read = reader;
+  constructor (reader, opt) {
+    super(opt)
+    this._read = reader
   }
-};
+}
 
 /**
  * Call rs.pipe(ws) with error propagation from rs to ws
@@ -26,9 +26,9 @@ const LimitedStream = class extends stream.Readable {
  * @return {Stream.Writable} passed ws itself
  */
 const _pipe = (rs, ws) => {
-  rs.on('error', (e) => ws.destroy(e));
-  return rs.pipe(ws);
-};
+  rs.on('error', (e) => ws.destroy(e))
+  return rs.pipe(ws)
+}
 
 /**
  * @callback rejectCallback
@@ -64,11 +64,11 @@ const _pipe = (rs, ws) => {
  * }
  */
 const _ = (resolve, reject, f) => {
-  return ((f) => function(resolve, reject){ try { f(resolve, reject); } catch(e) { reject(e); } })(
+  return ((f) => function (resolve, reject) { try { f(resolve, reject) } catch (e) { reject(e) } })(
     reject !== undefined ? () => f(resolve, reject)
                          : resolve
   )
-};
+}
 
 /**
  * @callback transformCallbackCallback
@@ -98,8 +98,8 @@ const textutils = class {
    * @constructor
    * @param  {Stream.Readable} st A readable stream to be holded by the resultant textutils object
    */
-  constructor(st) {
-    this.stream = st;
+  constructor (st) {
+    this.stream = st
   }
   /**
    * A helper method to create a textutils object having the specified stream wrapped by a line-by-line stream
@@ -107,17 +107,17 @@ const textutils = class {
    * @param  {Stream.Readable} rs A readable stream to be wrapped
    * @return {textutils}
    */
-  static _toline(rs) {
-    let left;
+  static _toline (rs) {
+    let left
     return new this(_pipe(_pipe(rs, split2(/(\r?\n)/)), through2((chunk, enc, cb) => {
-      if(chunk.includes('\n')) {
-        cb(null, Buffer.concat([left===undefined?new Buffer(0):left, chunk]));
-        left = undefined;
+      if (chunk.includes('\n')) {
+        cb(null, Buffer.concat([left === undefined ? Buffer.alloc(0) : left, chunk]))
+        left = undefined
       } else {
-        cb();
-        left = chunk;
+        cb()
+        left = chunk
       }
-    }, function(cb) { if(left !== undefined) this.push(left); cb(); })));
+    }, function (cb) { if (left !== undefined) { this.push(left) } cb() })))
   }
   // TODO: support multiple paths
   /**
@@ -125,8 +125,8 @@ const textutils = class {
    * @param  {string} path target file path
    * @return {textutils}   textutils object
    */
-  static cat(path) {
-    return this._toline(fs.createReadStream(path, { encoding: 'utf8' }));
+  static cat (path) {
+    return this._toline(fs.createReadStream(path, { encoding: 'utf8' }))
   }
   /**
    * A helper method to pipe streams, calling _pipe(this.stream, ws)
@@ -134,8 +134,8 @@ const textutils = class {
    * @param  {Stream.Writable} ws A writable stream piped to
    * @return {Stream.Writable} passed ws itself
    */
-  _pipe(ws) {
-    return _pipe(this.stream, ws);
+  _pipe (ws) {
+    return _pipe(this.stream, ws)
   }
   /**
    * A helper method to pipe to a transform stream
@@ -144,8 +144,8 @@ const textutils = class {
    * @param  {flushCallback} flush A flush callback for transform stream
    * @return {textutils} A textutils object holding the resultant transform stream
    */
-  _tpipe(transform, flush) {
-    return new this.constructor(this._pipe(through2(transform, flush)));
+  _tpipe (transform, flush) {
+    return new this.constructor(this._pipe(through2(transform, flush)))
   }
   /**
    * A helper method to pipe to a transform stream with a line-by-line stream
@@ -154,16 +154,16 @@ const textutils = class {
    * @param  {flushCallback} flush A flush callback for transform stream
    * @return {textutils} A textutils object holding the resultant transform stream
    */
-  _tpipe_toline(transform, flush) {
-    return this.constructor._toline(this._pipe(through2(transform, flush)));
+  _tpipeToline (transform, flush) {
+    return this.constructor._toline(this._pipe(through2(transform, flush)))
   }
   /**
    * Filter content by string.match()
    * @param  {RegExp} re passed to string.match()
    * @return {textutils}
    */
-  grep(re) {
-    return this._tpipe((chunk, enc, cb) => chunk.toString().match(re) ? cb(null, chunk) : cb());
+  grep (re) {
+    return this._tpipe((chunk, enc, cb) => chunk.toString().match(re) ? cb(null, chunk) : cb())
   }
   /**
    * Replace content by string.replace()
@@ -171,27 +171,27 @@ const textutils = class {
    * @param  {string|function} re2 passed as 2nd parameter of string.replace()
    * @return {textutils}
    */
-  sed(re1, re2) {
-    return this._tpipe((chunk, enc, cb) => cb(null, Buffer.from(chunk.toString().replace(re1, re2))));
+  sed (re1, re2) {
+    return this._tpipe((chunk, enc, cb) => cb(null, Buffer.from(chunk.toString().replace(re1, re2))))
   }
   /**
    * Output the first specified number of lines
    * @param  {integer} num Number of lines
    * @return {textutils}
    */
-  head(num) {
-    return this._tpipe((chunk, enc, cb) => num-->0?cb(null,chunk):cb());
+  head (num) {
+    return this._tpipe((chunk, enc, cb) => num-- > 0 ? cb(null, chunk) : cb())
   }
   /**
    * Output the last specified number of lines
    * @param  {integer} num Number of lines
    * @return {textutils}
    */
-  tail(num) {
-    let buf = new Deque();
+  tail (num) {
+    let buf = new Deque()
     return this._tpipe(
-      (chunk, enc, cb) => { if(buf.length === num) buf.shift(); buf.push(chunk); cb(); },
-      function(cb) { for(let val of buf) { this.push(val); } cb(); });
+      (chunk, enc, cb) => { if (buf.length === num) { buf.shift() } buf.push(chunk); cb() },
+      function (cb) { for (let val of buf) { this.push(val) } cb() })
   }
   /**
    * Output the specified header and footer around content
@@ -199,25 +199,25 @@ const textutils = class {
    * @param  {Buffer|string} post A footer content
    * @return {textutils}
    */
-  prepost(pre, post) {
-    let predone = false;
-    return this._tpipe_toline(
-      function(chunk, enc, cb) { if(!predone) { predone=true; if(pre!==undefined) { this.push(pre); } } cb(null, chunk); },
-      function(cb) { if(post!==undefined) { this.push(post)} cb(); }
-    );
+  prepost (pre, post) {
+    let predone = false
+    return this._tpipeToline(
+      function (chunk, enc, cb) { if (!predone) { predone = true; if (pre !== undefined) { this.push(pre) } } cb(null, chunk) },
+      function (cb) { if (post !== undefined) { this.push(post) } cb() }
+    )
   }
   /**
    * Output content with the specified header
    * @param  {Buffer|string} pre A header content
    * @return {textutils}
    */
-  pre(pre) { return this.prepost(pre); }
+  pre (pre) { return this.prepost(pre) }
   /**
    * Output content with the specified footer
    * @param  {Buffer|string} post A footer content
    * @return {textutils}
    */
-  post(post) { return this.prepost(undefined, post); }
+  post (post) { return this.prepost(undefined, post) }
   // TODO: method to skip lines
   /**
    * @callback mapCallback
@@ -229,8 +229,8 @@ const textutils = class {
    * @param {mapCallback} f A filter function called for each line. If it returns null or undefined, the line is ignored.
    * @return {textutils}
    */
-  map(f) {
-    return this._tpipe((chunk, enc, cb) => { let ret = f(chunk.toString()); if(ret === undefined || ret === null) cb(); else cb(null, Buffer.from(ret)) });
+  map (f) {
+    return this._tpipe((chunk, enc, cb) => { let ret = f(chunk.toString()); if (ret === undefined || ret === null) cb(); else cb(null, Buffer.from(ret)) })
   }
   // FIXME: naive implementation
   // TODO: key extractor
@@ -239,11 +239,11 @@ const textutils = class {
    * Sort, currently, by just calling array.sort()
    * @return {textutils}
    */
-  sort() {
-    let data = [];
-    return this._tpipe((chunk, enc, cb) => { data.push(chunk); cb(); },
-      function(cb) { data.sort(); for(let val of data) this.push(val); cb(); }
-    );
+  sort () {
+    let data = []
+    return this._tpipe((chunk, enc, cb) => { data.push(chunk); cb() },
+      function (cb) { data.sort(); for (let val of data) { this.push(val) } cb() }
+    )
   }
   // TODO: key extractor
   // TODO: comparator
@@ -251,15 +251,19 @@ const textutils = class {
    * Remove duplicated consecutive lines
    * @return {textutils}
    */
-  uniq() {
-    let data;
-    return this._tpipe(function(chunk, enc, cb) {
-        if(data === undefined) data = chunk
-        else if (!data.equals(chunk)) { this.push(data); data = chunk; }
-        cb();
+  uniq () {
+    let data
+    return this._tpipe(
+      function (chunk, enc, cb) {
+        if (data === undefined) {
+          data = chunk
+        } else if (!data.equals(chunk)) {
+          this.push(data); data = chunk
+        }
+        cb()
       },
-      function(cb) { if(data !== undefined) this.push(data); cb(); }
-    );
+      function (cb) { if (data !== undefined) { this.push(data) } cb() }
+    )
   }
   /**
    * Execute an external command as a filter.
@@ -270,15 +274,16 @@ const textutils = class {
    * @param  {Object} options See child_process.spawn() in node.js
    * @return {textutils}
    */
-  spawn(command, args, options) {
-    let ret;
-    options = Object.assign({}, options);
-    options.stdio = [ 'pipe', 'pipe', 'ignore' ]; // TODO: binding with stderr
-    let ch = child_process.spawn(command, args, options);
-    ch.on('error', (e) => ret.stream.destroy(e));
-    this.stream.on('end', () => this.stream.unpipe());
-    this._pipe(ch.stdin);
-    return ret = this.constructor._toline(ch.stdout);
+  spawn (command, args, options) {
+    let ret
+    options = Object.assign({}, options)
+    options.stdio = [ 'pipe', 'pipe', 'ignore' ] // TODO: binding with stderr
+    let ch = cprocess.spawn(command, args, options)
+    ch.on('error', (e) => ret.stream.destroy(e))
+    this.stream.on('end', () => this.stream.unpipe())
+    this._pipe(ch.stdin)
+    ret = this.constructor._toline(ch.stdout)
+    return ret
   }
   /**
    * Pipe to the specified stream.
@@ -286,13 +291,14 @@ const textutils = class {
    * @param  {Stream.Writable} ws A writable stream piped to
    * @return {textutils}
    */
-  pipe(ws) {
-    let out = this._pipe(ws);
+  pipe (ws) {
+    let out = this._pipe(ws)
     // stdout and stderr are Duplex streams
-    if(ws !== process.stdout && ws !== process.stderr && ws instanceof stream.Readable)
-      return this.constructor._toline(out);
-     else
-      return out;
+    if (ws !== process.stdout && ws !== process.stderr && ws instanceof stream.Readable) {
+      return this.constructor._toline(out)
+    } else {
+      return out
+    }
   }
   /**
    * @callback applyCallback
@@ -304,8 +310,8 @@ const textutils = class {
    * @param  {applyCallback} f Called as f(stream)
    * @return {any}   Return value of the specified f
    */
-  apply(f) {
-    return f(this.stream);
+  apply (f) {
+    return f(this.stream)
   }
   /**
    * @callback teeCallback
@@ -318,8 +324,8 @@ const textutils = class {
    * @example
    * tu.cat('input.txt').tee(t=>t.out('output1.txt')).out('output2.txt');
    */
-  tee(f) {
-    f(this); return this;
+  tee (f) {
+    f(this); return this
   }
   /**
    * @callback matcherCallback
@@ -329,49 +335,54 @@ const textutils = class {
   /**
    * An internal helper method to implement divide() variants.
    * @access protected
-   * @param  {Boolean} is_from  If true, the line that the match succeeds will be the first line of the divided sections. If false, the line that the match succeeds will be the last line of the divided sections.
+   * @param  {Boolean} isFrom  If true, the line that the match succeeds will be the first line of the divided sections. If false, the line that the match succeeds will be the last line of the divided sections.
    * @param  {string|RegExp|matcherCallback}  matcher_ A criteria for division
    * @param  {teeCallback}  f        A callback for each divided section
    * @return {Promise}     A promise object to be resolved when completion
    */
-  _divide(is_from, matcher_, f) {
+  _divide (isFrom, matcher_, f) {
 // TODO: error handling check
     return new Promise(_((resolve, reject) => {
-      let matcher = (typeof matcher_ === 'string' || matcher_ instanceof RegExp) ? s => s.match(matcher_) : matcher_;
-      let lines = 0, count = 0, data = new Deque(), eos = false, stm, reader, first = true;
-      let req = 0; // according to spec, should be 1 or 0
+      let matcher = (typeof matcher_ === 'string' || matcher_ instanceof RegExp) ? s => s.match(matcher_) : matcher_
+      let lines = 0
+      let count = 0
+      let data = new Deque()
+      let eos = false
+      let first = true
+      let stm, reader
+      let req = 0 // according to spec, should be 1 or 0
       let pusher = (val) => {
-        if(val === null) {
-          if(stm !== undefined) {
-            stm.push(null); // signal stream end
+        if (val === null) {
+          if (stm !== undefined) {
+            stm.push(null) // signal stream end
           }
-          resolve(); // signal end
-        } else if(stm === undefined) {
-          stm = new LimitedStream(reader); f(new this.constructor(stm), count++);
-        } else if(is_from && matcher(val.toString(), lines)) {
-          stm.push(null);
-          stm = new LimitedStream(reader); f(new this.constructor(stm), count++);
+          resolve() // signal end
+        } else if (stm === undefined) {
+          stm = new LimitedStream(reader); f(new this.constructor(stm), count++)
+        } else if (isFrom && matcher(val.toString(), lines)) {
+          stm.push(null)
+          stm = new LimitedStream(reader); f(new this.constructor(stm), count++)
         }
-        stm.push(val); ++lines;
-        if(!is_from && matcher(val.toString(), lines)) {
-          stm.push(null);
-          stm = new LimitedStream(reader); f(new this.constructor(stm), count++);
+        stm.push(val); ++lines
+        if (!isFrom && matcher(val.toString(), lines)) {
+          stm.push(null)
+          stm = new LimitedStream(reader); f(new this.constructor(stm), count++)
         }
-      };
-      reader = () => { if(data.length) pusher(data.shift()); else if(eos) pusher(null); else ++req; };
+      }
+      reader = () => { if (data.length) { pusher(data.shift()) } else if (eos) { pusher(null) } else { ++req } }
 
       this.stream.on('data', (chunk) => {
-        if(first) { ++req; first = false; }
-        data.push(chunk);
-        while(data.length>0 && req>0) {
-          pusher(data.shift()); --req;
+        if (first) { ++req; first = false }
+        data.push(chunk)
+        while (data.length > 0 && req > 0) {
+          pusher(data.shift()); --req
         }
       })
       .on('end', () => {
-        eos = true;
-        if(req>0) pusher(null); // reader() already called
-      });
-    }));
+        eos = true
+        if (req > 0) pusher(null) // reader() already called
+      })
+    }))
   }
   /**
    * Divide content according to the specified criteria.
@@ -380,7 +391,7 @@ const textutils = class {
    * @param  {teeCallback}  f        A callback for each divided section
    * @return {Promise}     A promise object to be resolved when completion
    */
-  divide_from(matcher, f) { return this._divide(true, matcher, f); }
+  divideFrom (matcher, f) { return this._divide(true, matcher, f) }
   /**
    * Divide content according to the specified criteria.
    * The line that the match succeeds will be the last line of the divided sections.
@@ -388,40 +399,40 @@ const textutils = class {
    * @param  {teeCallback}  f        A callback for each divided section
    * @return {Promise}     A promise object to be resolved when completion
    */
-  divide_to(matcher, f) { return this._divide(false, matcher, f); }
+  divideTo (matcher, f) { return this._divide(false, matcher, f) }
   /**
    * Divide content by line numbers.
    * @param  {integer} num A number of lines for a divided section
    * @param  {teeCallback}  f        A callback for each divided section
    * @return {Promise}     A promise object to be resolved when completion
    */
-  divide(num, f) { return this._divide(true, (v,n) => n%num==0, f); }
+  divide (num, f) { return this._divide(true, (v, n) => (n % num) === 0, f) }
   // TODO: output to stdout/stderr
   /**
    * Write streamed input to the specified file.
    * @param  {string} path target file path
    * @return {Promise}     a promise object to be resolved when completion
    */
-  out(path, opt) {
+  out (path, opt) {
     return new Promise(_((resolve, reject) => {
-      let ws = fs.createWriteStream(path).on('error', reject).on('close', resolve);
-      let { pre, post } = Object.assign({pre:undefined,post:undefined}, opt);
-      if(pre !== undefined) ws.write(pre)
+      let ws = fs.createWriteStream(path).on('error', reject).on('close', resolve)
+      let { pre, post } = Object.assign({ pre: undefined, post: undefined }, opt)
+      if (pre !== undefined) ws.write(pre)
       this.stream
-        .on('error', (e) => { ws.destroy(e); reject(e); })
-        .on('end', _(resolve, reject, () => { if(post !== undefined) ws.end(post); else ws.end(); }))
-        .pipe(ws, { end: false });
-    }));
+        .on('error', (e) => { ws.destroy(e); reject(e) })
+        .on('end', _(resolve, reject, () => { if (post !== undefined) { ws.end(post) } else { ws.end() } }))
+        .pipe(ws, { end: false })
+    }))
   }
-};
+}
 
 /**
  * Tiny text utilities
  * @module textutils
  * @example
- * const tu = require('textutils');
+ * const tu = require('textutils')
  * tu.input('input.txt').grep(/foo/).sed(/bar/i, 'zot').out('output.txt')
- *   .then(()=>console.log('success'),(e)=>console.log(e));
+ *   .then(()=>console.log('success'),(e)=>console.log(e))
  */
 
-module.exports = textutils;
+module.exports = textutils
