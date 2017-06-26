@@ -110,7 +110,7 @@ const textutils = class {
   static _toline (rs) {
     let left
     return new this(_pipe(_pipe(rs, split2(/(\r?\n)/)), through2((chunk, enc, cb) => {
-      if (chunk.includes('\n')) {
+      if (chunk.indexOf('\n') !== -1) { // No chunk.includes(), prior to Node v5.3
         cb(null, Buffer.concat([left === undefined ? Buffer.alloc(0) : left, chunk]))
         left = undefined
       } else {
@@ -416,11 +416,11 @@ const textutils = class {
   out (path, opt) {
     return new Promise(_((resolve, reject) => {
       let ws = fs.createWriteStream(path).on('error', reject).on('close', resolve)
-      let { pre, post } = Object.assign({ pre: undefined, post: undefined }, opt)
-      if (pre !== undefined) ws.write(pre)
+      let myopt = Object.assign({ pre: undefined, post: undefined }, opt) // destructuring requires explicit option, prior to Node v6
+      if (myopt.pre !== undefined) ws.write(myopt.pre)
       this.stream
         .on('error', (e) => { ws.destroy(e); reject(e) })
-        .on('end', _(resolve, reject, () => { if (post !== undefined) { ws.end(post) } else { ws.end() } }))
+        .on('end', _(resolve, reject, () => { if (myopt.post !== undefined) { ws.end(myopt.post) } else { ws.end() } }))
         .pipe(ws, { end: false })
     }))
   }

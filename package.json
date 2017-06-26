@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Tiny line-oriented text utilities having shell script flavor",
   "main": "textutils.js",
+  "engines": {
+    "node": ">=4.5.0 || >= 5.10.0"
+  },
   "dependencies": {
     "denque": "^1.1.1",
     "split2": "^2.1.1",
