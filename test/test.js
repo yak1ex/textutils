@@ -19,11 +19,14 @@ const tu = textutils
 const INPUT = path.join(__dirname, 'test.md')
 const OUTPUT = path.join(__dirname, 'test.out')
 const ERROR = path.join(__dirname, 'notexistent/test.out')
-const GREP = path.join(__dirname, 'test_grep.md')
-const SED = path.join(__dirname, 'test_sed.md')
-const PRE = path.join(__dirname, 'test_pre.md')
-const POST = path.join(__dirname, 'test_post.md')
-const PREPOST = path.join(__dirname, 'test_prepost.md')
+const outname = (suf) => path.join(__dirname, `test_${suf}.md`)
+const GREP = outname('grep')
+const SED = outname('sed')
+const HEAD = outname('head')
+const TAIL = outname('tail')
+const PRE = outname('pre')
+const POST = outname('post')
+const PREPOST = outname('prepost')
 
 describe('textutils', function () {
   afterEach(function () {
