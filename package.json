@@ -15,11 +15,13 @@
     "chai": "^3.5.0",
     "chai-as-promised": "^7.0.0",
     "chai-files": "^1.4.0",
+    "istanbul": "^0.4.5",
     "mocha": "^3.2.0",
     "standard": "*"
   },
   "scripts": {
-    "test": "standard && mocha"
+    "test": "standard && mocha",
+    "cover": "istanbul cover node_modules/mocha/bin/_mocha"
   },
   "repository": "yak1ex/textutils",
   "author": "yak_ex@mx.scn.tv",
