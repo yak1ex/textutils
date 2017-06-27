@@ -18,22 +18,30 @@ const tu = textutils
 
 const INPUT = path.join(__dirname, 'test.md')
 const OUTPUT = path.join(__dirname, 'test.out')
+const OUTPUT0 = path.join(__dirname, 'test0.out')
+const OUTPUT1 = path.join(__dirname, 'test1.out')
 const ERROR = path.join(__dirname, 'notexistent/test.out')
-const outname = (suf) => path.join(__dirname, `test_${suf}.md`)
-const GREP = outname('grep')
-const SED = outname('sed')
-const HEAD = outname('head')
-const TAIL = outname('tail')
-const PRE = outname('pre')
-const POST = outname('post')
-const PREPOST = outname('prepost')
+const refname = (suf) => path.join(__dirname, `test_${suf}.md`)
+const DIV0 = refname('div0')
+const DIV1 = refname('div1')
+const MAP = refname('map')
+const BLANK = refname('blank')
+const GREP = refname('grep')
+const SED = refname('sed')
+const HEAD = refname('head')
+const TAIL = refname('tail')
+const PRE = refname('pre')
+const POST = refname('post')
+const PREPOST = refname('prepost')
+const SORT = refname('sort')
+const DUP = refname('dup')
+const UNIQ = refname('uniq')
 
 describe('textutils', function () {
   afterEach(function () {
-    try {
-      fs.unlinkSync(OUTPUT)
-    } catch (e) {
-    }
+    try { fs.unlinkSync(OUTPUT) } catch (e) {}
+    try { fs.unlinkSync(OUTPUT0) } catch (e) {}
+    try { fs.unlinkSync(OUTPUT1) } catch (e) {}
   })
 
   describe('cat', function () {
@@ -96,13 +104,134 @@ describe('textutils', function () {
     })
   })
 
-// tee
-// divide_from
-// divide_to
-// divide
+  describe('tee', function () {
+    it('should split calling chain', function () {
+      let promises = []
+      promises.push(tu.cat(INPUT).tee(t => promises.push(t.out(OUTPUT0))).out(OUTPUT1))
+      return Promise.all(promises).then(function () {
+        expect(file(OUTPUT0)).to.exist // eslint-disable-line no-unused-expressions
+        expect(file(OUTPUT0)).to.equal(file(INPUT))
+        expect(file(OUTPUT1)).to.exist // eslint-disable-line no-unused-expressions
+        expect(file(OUTPUT1)).to.equal(file(INPUT))
+      })
+    })
+  })
 
-// apply
-// map
+  describe('divideFrom', function () {
+    it('should ouput divided content, whose first line is the line matched to function matcher', function () {
+      return tu.cat(INPUT).divideFrom(x => x.match(/6/), (t, count) => t.out(path.join(__dirname, `test${count}.out`))).then(function () {
+        expect(file(OUTPUT0)).to.exist // eslint-disable-line no-unused-expressions
+        expect(file(OUTPUT0)).to.equal(file(DIV0))
+        expect(file(OUTPUT1)).to.exist // eslint-disable-line no-unused-expressions
+        expect(file(OUTPUT1)).to.equal(file(DIV1))
+      })
+    })
+    it('should ouput divided content, whose first line is the line matched to regexp matcher', function () {
+      return tu.cat(INPUT).divideFrom(/6/, (t, count) => t.out(path.join(__dirname, `test${count}.out`))).then(function () {
+        expect(file(OUTPUT0)).to.exist // eslint-disable-line no-unused-expressions
+        expect(file(OUTPUT0)).to.equal(file(DIV0))
+        expect(file(OUTPUT1)).to.exist // eslint-disable-line no-unused-expressions
+        expect(file(OUTPUT1)).to.equal(file(DIV1))
+      })
+    })
+    it('should ouput divided content, whose first line is the line matched to string matcher', function () {
+      return tu.cat(INPUT).divideFrom('6', (t, count) => t.out(path.join(__dirname, `test${count}.out`))).then(function () {
+        expect(file(OUTPUT0)).to.exist // eslint-disable-line no-unused-expressions
+        expect(file(OUTPUT0)).to.equal(file(DIV0))
+        expect(file(OUTPUT1)).to.exist // eslint-disable-line no-unused-expressions
+        expect(file(OUTPUT1)).to.equal(file(DIV1))
+      })
+    })
+    it('should ouput all content if the match does not occur', function () {
+      return tu.cat(INPUT).divideFrom(() => false, (t, count) => t.out(path.join(__dirname, `test${count}.out`))).then(function () {
+        expect(file(OUTPUT0)).to.exist // eslint-disable-line no-unused-expressions
+        expect(file(OUTPUT0)).to.equal(file(INPUT))
+      })
+    })
+  })
+
+  describe('divideTo', function () {
+    it('should ouput divided content, whose last line is the line matched to function matcher', function () {
+      return tu.cat(INPUT).divideTo(x => x.match(/5/), (t, count) => t.out(path.join(__dirname, `test${count}.out`))).then(function () {
+        expect(file(OUTPUT0)).to.exist // eslint-disable-line no-unused-expressions
+        expect(file(OUTPUT0)).to.equal(file(DIV0))
+        expect(file(OUTPUT1)).to.exist // eslint-disable-line no-unused-expressions
+        expect(file(OUTPUT1)).to.equal(file(DIV1))
+      })
+    })
+    it('should ouput divided content, whose last line is the line matched to regexp matcher', function () {
+      return tu.cat(INPUT).divideTo(/5/, (t, count) => t.out(path.join(__dirname, `test${count}.out`))).then(function () {
+        expect(file(OUTPUT0)).to.exist // eslint-disable-line no-unused-expressions
+        expect(file(OUTPUT0)).to.equal(file(DIV0))
+        expect(file(OUTPUT1)).to.exist // eslint-disable-line no-unused-expressions
+        expect(file(OUTPUT1)).to.equal(file(DIV1))
+      })
+    })
+    it('should ouput divided content, whose last line is the line matched to string matcher', function () {
+      return tu.cat(INPUT).divideTo('5', (t, count) => t.out(path.join(__dirname, `test${count}.out`))).then(function () {
+        expect(file(OUTPUT0)).to.exist // eslint-disable-line no-unused-expressions
+        expect(file(OUTPUT0)).to.equal(file(DIV0))
+        expect(file(OUTPUT1)).to.exist // eslint-disable-line no-unused-expressions
+        expect(file(OUTPUT1)).to.equal(file(DIV1))
+      })
+    })
+    it('should ouput all content if the match does not occur', function () {
+      return tu.cat(INPUT).divideFrom(() => false, (t, count) => t.out(path.join(__dirname, `test${count}.out`))).then(function () {
+        expect(file(OUTPUT0)).to.exist // eslint-disable-line no-unused-expressions
+        expect(file(OUTPUT0)).to.equal(file(INPUT))
+      })
+    })
+  })
+
+  describe('divide', function () {
+    it('should ouput divided content by the specified line number', function () {
+      return tu.cat(INPUT).divide(5, (t, count) => t.out(path.join(__dirname, `test${count}.out`))).then(function () {
+        expect(file(OUTPUT0)).to.exist // eslint-disable-line no-unused-expressions
+        expect(file(OUTPUT0)).to.equal(file(DIV0))
+        expect(file(OUTPUT1)).to.exist // eslint-disable-line no-unused-expressions
+        expect(file(OUTPUT1)).to.equal(file(DIV1))
+      })
+    })
+    it('should ouput all content if the match does not occur', function () {
+      return tu.cat(INPUT).divide(100, (t, count) => t.out(path.join(__dirname, `test${count}.out`))).then(function () {
+        expect(file(OUTPUT0)).to.exist // eslint-disable-line no-unused-expressions
+        expect(file(OUTPUT0)).to.equal(file(INPUT))
+      })
+    })
+  })
+
+  describe('apply', function () {
+    it('should call the specified function with the resultant stream', function (done) {
+      let ws = fs.createWriteStream(OUTPUT)
+      tu.cat(INPUT).map(x => ('x' + x).replace(/\n$/, 'x\n')).apply(st => st.pipe(ws))
+      ws.on('close', function () {
+        expect(file(OUTPUT)).to.exist // eslint-disable-line no-unused-expressions
+        expect(file(OUTPUT)).to.equal(file(MAP))
+        done()
+      })
+    })
+  })
+
+  describe('map', function () {
+    it('should transform content by the specified function', function () {
+      return tu.cat(INPUT).map(x => ('x' + x).replace(/\n$/, 'x\n')).out(OUTPUT).then(function () {
+        expect(file(OUTPUT)).to.exist // eslint-disable-line no-unused-expressions
+        expect(file(OUTPUT)).to.equal(file(MAP))
+      })
+    })
+    it('should remove content if the specified function returns undefined', function () {
+      return tu.cat(INPUT).map(x => undefined).out(OUTPUT).then(function () {
+        expect(file(OUTPUT)).to.exist // eslint-disable-line no-unused-expressions
+        expect(file(OUTPUT)).to.equal(file(BLANK))
+      })
+    })
+    it('should remove content if the specified function returns null', function () {
+      return tu.cat(INPUT).map(x => null).out(OUTPUT).then(function () {
+        expect(file(OUTPUT)).to.exist // eslint-disable-line no-unused-expressions
+        expect(file(OUTPUT)).to.equal(file(BLANK))
+      })
+    })
+  })
 
   describe('spawn', function () {
     it('should invoke external command', function () {
@@ -233,6 +362,21 @@ describe('textutils', function () {
     })
   })
 
-// sort
-// uniq
+  describe('sort', function () {
+    it('should make sorted output', function () {
+      return tu.cat(INPUT).sort().out(OUTPUT).then(function () {
+        expect(file(OUTPUT)).to.exist // eslint-disable-line no-unused-expressions
+        expect(file(OUTPUT)).to.equal(file(SORT))
+      })
+    })
+  })
+
+  describe('uniq', function () {
+    it('should make unique output', function () {
+      return tu.cat(DUP).sort().uniq().out(OUTPUT).then(function () {
+        expect(file(OUTPUT)).to.exist // eslint-disable-line no-unused-expressions
+        expect(file(OUTPUT)).to.equal(file(UNIQ))
+      })
+    })
+  })
 })
