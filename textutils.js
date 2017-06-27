@@ -332,13 +332,19 @@ const textutils = class {
    * @param {string}
    * @return {boolean}
    */
+   /**
+    * @callback divideCallback
+    * @param {textutils} tu
+    * @param {integer} count The sequence number in the divided sections
+    * @return {Promise} A promise object to be resolved when completion
+    */
   /**
    * An internal helper method to implement divide() variants.
    * @access protected
    * @param  {Boolean} isFrom  If true, the line that the match succeeds will be the first line of the divided sections. If false, the line that the match succeeds will be the last line of the divided sections.
    * @param  {string|RegExp|matcherCallback}  matcher_ A criteria for division
-   * @param  {teeCallback}  f        A callback for each divided section
-   * @return {Promise}     A promise object to be resolved when completion
+   * @param  {divideCallback}  f        A callback for each divided section
+   * @return {Promise}     A promise object to be resolved when completion of all callback calls or rejection of any
    */
   _divide (isFrom, matcher_, f) {
 // TODO: error handling check
@@ -351,22 +357,24 @@ const textutils = class {
       let first = true
       let stm, reader
       let req = 0 // according to spec, should be 1 or 0
+      let promises = []
       let pusher = (val) => {
         if (val === null) {
           if (stm !== undefined) {
             stm.push(null) // signal stream end
           }
-          resolve() // signal end
+          Promise.all(promises).then(resolve, reject)
+          return
         } else if (stm === undefined) {
-          stm = new LimitedStream(reader); f(new this.constructor(stm), count++)
+          stm = new LimitedStream(reader); promises.push(f(new this.constructor(stm), count++))
         } else if (isFrom && matcher(val.toString(), lines)) {
           stm.push(null)
-          stm = new LimitedStream(reader); f(new this.constructor(stm), count++)
+          stm = new LimitedStream(reader); promises.push(f(new this.constructor(stm), count++))
         }
         stm.push(val); ++lines
         if (!isFrom && matcher(val.toString(), lines)) {
           stm.push(null)
-          stm = new LimitedStream(reader); f(new this.constructor(stm), count++)
+          stm = new LimitedStream(reader); promises.push(f(new this.constructor(stm), count++))
         }
       }
       reader = () => { if (data.length) { pusher(data.shift()) } else if (eos) { pusher(null) } else { ++req } }
@@ -388,23 +396,23 @@ const textutils = class {
    * Divide content according to the specified criteria.
    * The line that the match succeeds will be the first line of the divided sections.
    * @param  {string|RegExp|matcherCallback}  matcher_ A criteria for division
-   * @param  {teeCallback}  f        A callback for each divided section
-   * @return {Promise}     A promise object to be resolved when completion
+   * @param  {divideCallback}  f        A callback for each divided section
+   * @return {Promise}     A promise object to be resolved when completion of all callback calls or rejection of any
    */
   divideFrom (matcher, f) { return this._divide(true, matcher, f) }
   /**
    * Divide content according to the specified criteria.
    * The line that the match succeeds will be the last line of the divided sections.
    * @param  {string|RegExp|matcherCallback}  matcher_ A criteria for division
-   * @param  {teeCallback}  f        A callback for each divided section
-   * @return {Promise}     A promise object to be resolved when completion
+   * @param  {divideCallback}  f        A callback for each divided section
+   * @return {Promise}     A promise object to be resolved when completion of all callback calls or rejection of any
    */
   divideTo (matcher, f) { return this._divide(false, matcher, f) }
   /**
    * Divide content by line numbers.
    * @param  {integer} num A number of lines for a divided section
-   * @param  {teeCallback}  f        A callback for each divided section
-   * @return {Promise}     A promise object to be resolved when completion
+   * @param  {divideCallback}  f        A callback for each divided section
+   * @return {Promise}     A promise object to be resolved when completion of all callback calls or rejection of any
    */
   divide (num, f) { return this._divide(true, (v, n) => (n % num) === 0, f) }
   // TODO: output to stdout/stderr
