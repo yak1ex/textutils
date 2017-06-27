@@ -191,7 +191,7 @@ const textutils = class {
     let buf = new Deque()
     return this._tpipe(
       (chunk, enc, cb) => { if (buf.length === num) { buf.shift() } buf.push(chunk); cb() },
-      function (cb) { for (let val of buf) { this.push(val) } cb() })
+      function (cb) { for (let i = 0; i < buf.size(); ++i) { this.push(buf.get(i)) } cb() })
   }
   /**
    * Output the specified header and footer around content
