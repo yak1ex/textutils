@@ -143,8 +143,35 @@ describe('textutils', function () {
     })
   })
 
-// head
-// tail
+  describe('head', function () {
+    it('should ouput the first specified number of lines', function () {
+      return tu.cat(INPUT).head(5).out(OUTPUT).then(function () {
+        expect(file(OUTPUT)).to.exist // eslint-disable-line no-unused-expressions
+        expect(file(OUTPUT)).to.equal(file(HEAD))
+      })
+    })
+    it('should ouput all content if the specified line number exceeds actual', function () {
+      return tu.cat(INPUT).head(12).out(OUTPUT).then(function () {
+        expect(file(OUTPUT)).to.exist // eslint-disable-line no-unused-expressions
+        expect(file(OUTPUT)).to.equal(file(INPUT))
+      })
+    })
+  })
+
+  describe('tail', function () {
+    it('should ouput the last specified number of lines', function () {
+      return tu.cat(INPUT).tail(5).out(OUTPUT).then(function () {
+        expect(file(OUTPUT)).to.exist // eslint-disable-line no-unused-expressions
+        expect(file(OUTPUT)).to.equal(file(TAIL))
+      })
+    })
+    it('should ouput all content if the specified line number exceeds actual', function () {
+      return tu.cat(INPUT).tail(12).out(OUTPUT).then(function () {
+        expect(file(OUTPUT)).to.exist // eslint-disable-line no-unused-expressions
+        expect(file(OUTPUT)).to.equal(file(INPUT))
+      })
+    })
+  })
 
   describe('prepost', function () {
     it('should make a file whose contents are the same as recieved without specifying pre/post', function () {
