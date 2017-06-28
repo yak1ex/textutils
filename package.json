@@ -21,7 +21,8 @@
   },
   "scripts": {
     "test": "standard && mocha",
-    "cover": "istanbul cover node_modules/mocha/bin/_mocha"
+    "cover": "istanbul cover ./node_modules/mocha/bin/_mocha",
+    "coveralls": "standard && istanbul cover ./node_modules/mocha/bin/_mocha --report lcovonly -- -R spec && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js && rm -rf ./coverage"
   },
   "repository": "yak1ex/textutils",
   "author": "yak_ex@mx.scn.tv",
