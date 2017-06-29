@@ -22,6 +22,7 @@ const OUTPUT0 = path.join(__dirname, 'test0.out')
 const OUTPUT1 = path.join(__dirname, 'test1.out')
 const ERROR = path.join(__dirname, 'notexistent/test.out')
 const refname = (suf) => path.join(__dirname, `test_${suf}.md`)
+const NOLF = refname('nolf')
 const DIV0 = refname('div0')
 const DIV1 = refname('div1')
 const MAP = refname('map')
@@ -50,6 +51,12 @@ describe('textutils', function () {
       expect(c).to.be.an.instanceof(textutils)
       expect(c).to.have.property('stream')
       expect(c.stream).to.be.an.instanceof(stream)
+    })
+    it('should handle the case without LF at the end of the file', function () {
+      return tu.cat(NOLF).out(OUTPUT).then(function () {
+        expect(file(OUTPUT)).to.exist // eslint-disable-line no-unused-expressions
+        expect(file(OUTPUT)).to.equal(file(NOLF))
+      })
     })
   })
 
@@ -376,6 +383,18 @@ describe('textutils', function () {
       return tu.cat(DUP).sort().uniq().out(OUTPUT).then(function () {
         expect(file(OUTPUT)).to.exist // eslint-disable-line no-unused-expressions
         expect(file(OUTPUT)).to.equal(file(UNIQ))
+      })
+    })
+    it('should make identical output for already uniq-ed input', function () {
+      return tu.cat(HEAD).uniq().out(OUTPUT).then(function () {
+        expect(file(OUTPUT)).to.exist // eslint-disable-line no-unused-expressions
+        expect(file(OUTPUT)).to.equal(file(HEAD))
+      })
+    })
+    it('should identical output for blank input', function () {
+      return tu.cat(BLANK).uniq().out(OUTPUT).then(function () {
+        expect(file(OUTPUT)).to.exist // eslint-disable-line no-unused-expressions
+        expect(file(OUTPUT)).to.equal(file(BLANK))
       })
     })
   })
