@@ -1,4 +1,6 @@
-# textutils
+[![JavaScript Style Guide](https://img.shields.io/badge/code_style-standard-brightgreen.svg)](https://standardjs.com)
+[![Build Status](https://api.travis-ci.org/yak1ex/textutils.svg?branch=master)](https://travis-ci.org/yak1ex/textutils)
+[![Coverage Status](https://img.shields.io/coveralls/yak1ex/textutils.svg)](https://coveralls.io/github/yak1ex/textutils)
 
 A node module for tiny line-oriented text utilities having shell script flavor
 
