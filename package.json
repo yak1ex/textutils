@@ -21,7 +21,7 @@
     "standard": "*"
   },
   "scripts": {
-    "test": "standard && mocha",
+    "test": "standard textutils.js test && mocha",
     "cover": "istanbul cover ./node_modules/mocha/bin/_mocha",
     "coveralls": "standard && istanbul cover ./node_modules/mocha/bin/_mocha --report lcovonly -- -R spec && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js && rm -rf ./coverage"
   },

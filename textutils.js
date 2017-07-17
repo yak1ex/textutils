@@ -102,12 +102,12 @@ const textutils = class {
     this.stream = st
   }
   /**
-   * A helper method to create a textutils object having the specified stream wrapped by a line-by-line stream
+   * Create a textutils object having the specified stream wrapped by a line-by-line stream
    * @static
    * @param  {Stream.Readable} rs A readable stream to be wrapped
    * @return {textutils}
    */
-  static _toline (rs) {
+  static attach (rs) {
     let left
     return new this(_pipe(_pipe(rs, split2(/(\r?\n)/)), through2((chunk, enc, cb) => {
       if (chunk.indexOf('\n') !== -1) { // No chunk.includes(), prior to Node v5.3
@@ -126,7 +126,7 @@ const textutils = class {
    * @return {textutils}   textutils object
    */
   static cat (path) {
-    return this._toline(fs.createReadStream(path, { encoding: 'utf8' }))
+    return this.attach(fs.createReadStream(path, { encoding: 'utf8' }))
   }
   /**
    * A helper method to pipe streams, calling _pipe(this.stream, ws)
@@ -155,7 +155,7 @@ const textutils = class {
    * @return {textutils} A textutils object holding the resultant transform stream
    */
   _tpipeToline (transform, flush) {
-    return this.constructor._toline(this._pipe(through2(transform, flush)))
+    return this.constructor.attach(this._pipe(through2(transform, flush)))
   }
   /**
    * Filter content by string.match()
@@ -282,7 +282,7 @@ const textutils = class {
     ch.on('error', (e) => ret.stream.destroy(e))
     this.stream.on('end', () => this.stream.unpipe())
     this._pipe(ch.stdin)
-    ret = this.constructor._toline(ch.stdout)
+    ret = this.constructor.attach(ch.stdout)
     return ret
   }
   /**
@@ -295,7 +295,7 @@ const textutils = class {
     let out = this._pipe(ws)
     // stdout and stderr are Duplex streams
     if (ws !== process.stdout && ws !== process.stderr && ws instanceof stream.Readable) {
-      return this.constructor._toline(out)
+      return this.constructor.attach(out)
     } else {
       return out
     }

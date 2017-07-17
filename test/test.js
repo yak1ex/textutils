@@ -45,6 +45,23 @@ describe('textutils', function () {
     try { fs.unlinkSync(OUTPUT1) } catch (e) {}
   })
 
+  describe('attach', function () {
+    it('should return textutils class object with stream property', function () {
+      let rs = fs.createReadStream(INPUT)
+      let c = tu.attach(rs)
+      expect(c).to.be.an.instanceof(textutils)
+      expect(c).to.have.property('stream')
+      expect(c.stream).to.be.an.instanceof(stream)
+    })
+    it('should handle the case without LF at the end of the file', function () {
+      let rs = fs.createReadStream(NOLF)
+      return tu.attach(rs).out(OUTPUT).then(function () {
+        expect(file(OUTPUT)).to.exist // eslint-disable-line no-unused-expressions
+        expect(file(OUTPUT)).to.equal(file(NOLF))
+      })
+    })
+  })
+
   describe('cat', function () {
     it('should return textutils class object with stream property', function () {
       let c = tu.cat(INPUT)
